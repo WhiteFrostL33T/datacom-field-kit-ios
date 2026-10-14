@@ -256,7 +256,7 @@ function renderProjects(){
   if(!data.projects.length){
     h+='<div class="card" style="margin-top:12px"><p class="mut">No projects yet. Create your first project to start tracking time, cable, materials and more.</p></div>';
   }
-  data.projects.slice().sort(function(a,b){return (a.status==='done')-(b.status==='done');})
+  data.projects.slice().sort(function(a,b){return ((a.status==='done')-(b.status==='done'))||((b.createdAt||0)-(a.createdAt||0));})
   .forEach(function(p){
     var mods=enabledMods(p);
     h+='<div class="card"><div class="proj-head"><div class="grow"><h3>'+esc(p.name)+'</h3>'
@@ -270,14 +270,15 @@ function renderProjects(){
       +'<div class="mut">Time tracked</div><b>'+fmtHM(projectMinutes(p.id))+'</b></div>'
       +'<div class="card" style="background:var(--panel2);margin:0;padding:10px;text-align:center">'
       +'<div class="mut">Cable used</div><b>'+projectCableFt(p.id)+' ft</b></div></div>'
-      +'<button class="btn" style="margin-top:10px" onclick="openProject(\''+p.id+'\')">Open project</button></div>';
+      +'<div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="openProject(\''+p.id+'\')">Open project</button>'
+      +'<button class="btn sec" onclick="exportProject(\''+p.id+'\')">Export</button></div></div>';
   });
   $('app').innerHTML=h;
 }
 function toggleProjForm(){var f=$('projForm');f.style.display=f.style.display==='none'?'block':'none';}
 function createProject(){
   var name=val('np_name');if(!name){toast('Project name is required');return;}
-  data.projects.push({id:uid(),name:name,customer:val('np_customer'),site:val('np_site'),
+  data.projects.push({id:uid(),createdAt:Date.now(),name:name,customer:val('np_customer'),site:val('np_site'),
     ticket:val('np_ticket'),notes:val('np_notes'),status:'active',technicians:[],
     enabledModules:DEFAULT_MODULES.slice()});
   save();render();toast('Project created');}
@@ -297,6 +298,24 @@ function delProject(id){
   delete data.storageCalcs[id];delete data.ipSubnets[id];
   if(data.timer&&data.timer.projectId===id)data.timer=null;
   save();goProjects();toast('Project deleted');}
+function exportProject(id){
+  var p=projById(id);if(!p)return;
+  var swIds=data.poeSwitches.filter(function(s){return s.projectId===id;}).map(function(s){return s.id;});
+  var ptIds=data.portSwitches.filter(function(s){return s.projectId===id;}).map(function(s){return s.id;});
+  var pack={app:'datacom-field-kit',kind:'project-export',version:1,exportedAt:new Date().toISOString(),
+    project:p,
+    timeEntries:data.timeEntries.filter(function(e){return e.projectId===id;}),
+    pulls:data.pulls.filter(function(x){return x.projectId===id;}),
+    materials:data.materials.filter(function(m){return m.projectId===id;}),
+    ipAssignments:data.ipAssignments.filter(function(x){return x.projectId===id;}),
+    ipSubnets:data.ipSubnets?data.ipSubnets[id]:undefined,
+    storageCalcs:data.storageCalcs?data.storageCalcs[id]:undefined,
+    poeSwitches:data.poeSwitches.filter(function(s){return s.projectId===id;}),
+    poeDevices:data.poeDevices.filter(function(d){return swIds.indexOf(d.switchId)>=0;}),
+    portSwitches:data.portSwitches.filter(function(s){return s.projectId===id;}),
+    portEntries:data.portEntries.filter(function(d){return ptIds.indexOf(d.switchId)>=0;})};
+  var slug=String(p.name||'project').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase()||'project';
+  saveFile('fieldkit-'+slug+'.json',JSON.stringify(pack,null,2));}
 /* ============ PROJECT VIEW SHELL ============ */
 function renderProject(){
   var p=projById(view.id);
