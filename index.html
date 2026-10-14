@@ -489,7 +489,7 @@ function cableHTML(p){
     boxes[key].used+=Number(x.used)||0;boxes[key].rows.push(x);});
   var boxNames=Object.keys(boxes);
   var h='<div class="card"><h3>Add cable pull</h3>'
-    +'<div class="row"><div><label>Run label</label><input id="cp_run" placeholder="e.g. Lobby cam"></div>'
+    +'<div class="row"><div><label>Cable type</label><input id="cp_run" placeholder="e.g. Cat6"></div>'
     +'<div><label>Box label</label><input id="cp_box" list="boxlist" value="Box 1">'
     +'<datalist id="boxlist">'+boxNames.map(function(b){return '<option value="'+esc(b)+'">';}).join('')+'</datalist></div></div>'
     +'<label>Box size (ft)</label><input id="cp_size" type="number" inputmode="decimal" value="1000">'
@@ -510,7 +510,7 @@ function cableHTML(p){
   boxNames.forEach(function(b){
     var bx=boxes[b];
     h+='<h4>'+esc(b)+' — '+bx.used+' ft used · '+Math.max(0,bx.size-bx.used)+' ft left of '+bx.size+'</h4>';
-    h+='<table><tr><th>Run</th><th>Markings</th><th>Used</th><th></th></tr>';
+    h+='<table><tr><th>Cable type</th><th>Markings</th><th>Used</th><th></th></tr>';
     bx.rows.forEach(function(x){
       var mk=x.mode==='single'?('single '+x.marking):(x.prev+' → '+x.newest);
       h+='<tr><td>'+esc(x.run||'')+'</td><td>'+esc(mk)+'</td><td><b>'+x.used+' ft</b></td>'
