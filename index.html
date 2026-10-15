@@ -139,7 +139,7 @@ window.FK={
 };
 /* ============ data layer ============ */
 var LS_KEY='fk_data_v1';
-var APP_VERSION='2.3';
+var APP_VERSION='2.4';
 var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Final materials log'],
   ['storage','Storage'],['poe','PoE'],['subnet','Subnet / IP'],['ports','Ports']];
 var ALWAYS_ON=['finallog'];
@@ -180,7 +180,8 @@ function todayStr(){var d=new Date(),p=function(n){return String(n).padStart(2,'
 /* ============ native bridge / fallbacks ============ */
 function saveFile(name,text){
   if(window.Android&&window.Android.saveTextFile){window.Android.saveTextFile(name,text);return;}
-  var blob=new Blob([text],{type:'text/plain'});var a=document.createElement('a');
+  var type=/\.json$/i.test(name)?'application/json':'text/plain';
+  var blob=new Blob([text],{type:type});var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},400);toast('Downloaded '+name);}
 function copyText(text){
@@ -261,7 +262,7 @@ function renderProjects(){
   h+='<button class="btn sec" style="margin:8px 0 12px" onclick="toggleImportForm()">Import Project</button>'
     +'<div id="importForm" style="display:none;margin-top:12px"><div class="card"><h3>Import project</h3>'
     +'<p class="mut">Bring in a project exported from another device (a fieldkit-*.json file).</p>'
-    +'<input id="ip_file" type="file" accept=".json,application/json">'
+    +'<input id="ip_file" type="file" accept=".json,.txt,application/json,text/plain">'
     +'<button class="btn sec" onclick="importProjectFile()">Import project</button>'
     +'<div id="ip_msg"></div></div></div>';
   data.projects.slice().sort(function(a,b){return ((a.status==='done')-(b.status==='done'))||((b.createdAt||0)-(a.createdAt||0));})
@@ -932,7 +933,7 @@ function renderBackup(){
     +'<button class="btn sec" onclick="copyText(val(\'bk_json\'))">Copy JSON</button></div></div>'
     +'<div class="card"><h3>Import backup</h3>'
     +'<p class="mut">Restoring replaces ALL current data in the app.</p>'
-    +'<input id="bk_file" type="file" accept=".json,application/json">'
+    +'<input id="bk_file" type="file" accept=".json,.txt,application/json,text/plain">'
     +'<button class="btn red" onclick="importBackup()">Import and replace all data</button>'
     +'<div id="bk_msg"></div></div>';
 }
