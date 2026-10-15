@@ -1,4 +1,4 @@
-var CACHE = 'fieldkit-v1';
+var CACHE = 'fieldkit-v2';
 var ASSETS = ['./', './index.html', './manifest.json', './logo.png',
   './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', function (e) {
@@ -6,8 +6,27 @@ self.addEventListener('install', function (e) {
     .then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (k) { return k !== CACHE; })
+        .map(function (k) { return caches.delete(k); }));
+    }).then(function () { return self.clients.claim(); })
+  );
 });
 self.addEventListener('fetch', function (e) {
-  e.respondWith(caches.match(e.request).then(function (r) { return r || fetch(e.request); }));
+  // Navigations: network first (always fresh when online), cache as offline fallback
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(function (resp) {
+        var copy = resp.clone();
+        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+        return resp;
+      }).catch(function () { return caches.match(e.request); })
+    );
+    return;
+  }
+  // Assets: cache first
+  e.respondWith(
+    caches.match(e.request).then(function (r) { return r || fetch(e.request); })
+  );
 });
