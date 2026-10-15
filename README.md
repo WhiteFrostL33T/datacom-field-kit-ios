@@ -1,22 +1,63 @@
-# Datacom Field Kit — iOS web version (test)
+# Datacom Field Kit — Field Kit Web
 
-The Datacom Field Kit as a hosted web app for iPhone: open the Pages URL in
-Safari, then Share → Add to Home Screen. Runs fullscreen like an app.
+The Datacom Field Kit as a universal web app for **Android and iOS**.
+Installable, works offline, no account, no cloud — all data lives in the
+browser on the device (localStorage).
 
-This is a **separate project** from the Android app
-(`WhiteFrostL33T/datacom-field-kit`) — separate versioning, separate builds.
+**Current version:** v2.5
+
+This repo is now the single home of the app. The standalone Android APK
+is retired (v2.3 was the last APK build); all new work ships here.
+
+## Install
+
+- **iPhone:** open the URL in Safari → Share → Add to Home Screen.
+- **Android:** open the URL in Chrome → menu (⋮) → Install app
+  (or Add to Home screen).
 
 ## How it works
 
-- `index.html` — the entire app (same single-file app as Android, plus iOS
-  home-screen meta tags). All data lives in the browser on the device
-  (localStorage) — no account, no cloud, works offline once loaded.
-- `apple-touch-icon.png` — home-screen icon (keystone data jack).
-- Backup: use the in-app Backup section — Export downloads a JSON file
-  (lands in the Files app), Import reads one back via the file picker.
+- `index.html` — the entire app in one file: project hub, time tracker
+  (timers + manual entries), cable pull, camera storage, PoE budget,
+  subnet/IP planner, port log, materials log, and the always-on final
+  materials log.
+- `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` —
+  PWA install support plus an offline service worker (page is always
+  fetched fresh when online, cached copy is the offline fallback).
+- `apple-touch-icon.png`, `logo.png` — home-screen icon and branding
+  (keystone data jack).
+- Backups: the in-app Backup section exports all data as JSON and can
+  restore it; each project card can also export/import individually
+  (`fieldkit-*.json`), which is the easiest way to move a job between
+  devices.
 
 ## Hosting
 
-Served with GitHub Pages (Deploy from branch → `main`, root). Public URL:
+GitHub Pages (Deploy from branch → `main`, root):
 
 https://whitefrostl33t.github.io/datacom-field-kit-ios/
+
+## Changelog
+
+- **v2.5** — footer now reads "Field Kit Web".
+- **v2.4** — backup/project imports accept `.txt` files; `.json`
+  downloads keep the right file type on Android.
+- **v2.3** — version number shown in the footer.
+- **v2.2** — spacing fix: Import button no longer touches the top
+  project card.
+- **v2.1** — Import Project is a toggle button like + New Project.
+- **v2.0** — import a project from a `fieldkit-*.json` export
+  (merges everything; re-import creates a copy); time entry notes
+  field wraps and grows as you type.
+- **v1.9** — projects sort newest-first; per-project Export button
+  (self-contained JSON).
+- **v1.8** — removed the preset quick picks; "Your picks" learns
+  from what you type.
+- **v1.7** — removed the locked Final materials log row from the
+  module toggles.
+- **v1.6** — section tabs became a dropdown; new always-on Final
+  materials log; export moved there; personal quick picks.
+- **v1.5** — stopwatch rounds up to 15-minute increments; materials
+  export leads with project name + ConnectWise #; cable footage
+  grouped by cable type.
+- **v1.4** — "Run label" renamed to "Cable type".
