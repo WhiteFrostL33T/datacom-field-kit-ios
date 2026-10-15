@@ -107,7 +107,7 @@ color:#bcd2e8;text-align:center;font-size:.68rem;padding:8px 10px;letter-spacing
 <div id="timerbar"></div>
 <main id="app"></main>
 <div id="toast"></div>
-<footer class="appfoot">&copy; 2026 Jeremy Ashley &middot; iOS web test</footer>
+<footer class="appfoot" id="appfoot">&copy; 2026 Jeremy Ashley &middot; iOS web test</footer>
 
 <script>
 "use strict";
@@ -139,6 +139,7 @@ window.FK={
 };
 /* ============ data layer ============ */
 var LS_KEY='fk_data_v1';
+var APP_VERSION='2.3';
 var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Final materials log'],
   ['storage','Storage'],['poe','PoE'],['subnet','Subnet / IP'],['ports','Ports']];
 var ALWAYS_ON=['finallog'];
@@ -257,11 +258,12 @@ function renderProjects(){
   if(!data.projects.length){
     h+='<div class="card" style="margin-top:12px"><p class="mut">No projects yet. Create your first project to start tracking time, cable, materials and more.</p></div>';
   }
-  h+='<div class="card" style="margin-top:12px"><h3>Import project</h3>'
+  h+='<button class="btn sec" style="margin:8px 0 12px" onclick="toggleImportForm()">Import Project</button>'
+    +'<div id="importForm" style="display:none;margin-top:12px"><div class="card"><h3>Import project</h3>'
     +'<p class="mut">Bring in a project exported from another device (a fieldkit-*.json file).</p>'
     +'<input id="ip_file" type="file" accept=".json,application/json">'
     +'<button class="btn sec" onclick="importProjectFile()">Import project</button>'
-    +'<div id="ip_msg"></div></div>';
+    +'<div id="ip_msg"></div></div></div>';
   data.projects.slice().sort(function(a,b){return ((a.status==='done')-(b.status==='done'))||((b.createdAt||0)-(a.createdAt||0));})
   .forEach(function(p){
     var mods=enabledMods(p);
@@ -282,6 +284,7 @@ function renderProjects(){
   $('app').innerHTML=h;
 }
 function toggleProjForm(){var f=$('projForm');f.style.display=f.style.display==='none'?'block':'none';}
+function toggleImportForm(){var f=$('importForm');f.style.display=f.style.display==='none'?'block':'none';}
 function createProject(){
   var name=val('np_name');if(!name){toast('Project name is required');return;}
   data.projects.push({id:uid(),createdAt:Date.now(),name:name,customer:val('np_customer'),site:val('np_site'),
@@ -946,6 +949,7 @@ function importBackup(){
   };
   r.readAsText(f);}
 /* ============ init ============ */
+(function(){var f=document.getElementById('appfoot');if(f)f.innerHTML+=' &middot; v'+APP_VERSION;})();
 render();
 </script>
 </body>
