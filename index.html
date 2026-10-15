@@ -140,7 +140,7 @@ window.FK={
 };
 /* ============ data layer ============ */
 var LS_KEY='fk_data_v1';
-var APP_VERSION='2.6';
+var APP_VERSION='2.6.1';
 var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Final materials log'],
   ['storage','Storage'],['poe','PoE'],['subnet','Subnet / IP'],['ports','Ports']];
 var ALWAYS_ON=['finallog'];
@@ -926,12 +926,9 @@ function delMaterial(id){if(!confirm('Delete this material line?'))return;
   data.materials=data.materials.filter(function(x){return x.id!==id;});save();render();}
 /* ============ BACKUP VIEW ============ */
 function renderBackup(){
-  var json=JSON.stringify(data,null,2);
   $('app').innerHTML='<div class="card"><h3>Export backup</h3>'
     +'<p class="mut">All Field Kit data as JSON. Save it somewhere safe — it is the only copy of your on-device data.</p>'
-    +'<textarea id="bk_json" readonly>'+esc(json)+'</textarea>'
-    +'<div class="row"><button class="btn sec" onclick="saveFile(\'datacom-field-kit-backup.json\',val(\'bk_json\'))">Save JSON file</button>'
-    +'<button class="btn sec" onclick="copyText(val(\'bk_json\'))">Copy JSON</button></div></div>'
+    +'<button class="btn" onclick="saveFile(\'datacom-field-kit-backup.json\',JSON.stringify(data))">Backup</button></div>'
     +'<div class="card"><h3>Import backup</h3>'
     +'<p class="mut">Restoring replaces ALL current data in the app.</p>'
     +'<input id="bk_file" type="file" accept=".json,.txt,application/json,text/plain">'
