@@ -257,6 +257,11 @@ function renderProjects(){
   if(!data.projects.length){
     h+='<div class="card" style="margin-top:12px"><p class="mut">No projects yet. Create your first project to start tracking time, cable, materials and more.</p></div>';
   }
+  h+='<div class="card" style="margin-top:12px"><h3>Import project</h3>'
+    +'<p class="mut">Bring in a project exported from another device (a fieldkit-*.json file).</p>'
+    +'<input id="ip_file" type="file" accept=".json,application/json">'
+    +'<button class="btn sec" onclick="importProjectFile()">Import project</button>'
+    +'<div id="ip_msg"></div></div>';
   data.projects.slice().sort(function(a,b){return ((a.status==='done')-(b.status==='done'))||((b.createdAt||0)-(a.createdAt||0));})
   .forEach(function(p){
     var mods=enabledMods(p);
@@ -317,6 +322,44 @@ function exportProject(id){
     portEntries:data.portEntries.filter(function(d){return ptIds.indexOf(d.switchId)>=0;})};
   var slug=String(p.name||'project').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase()||'project';
   saveFile('fieldkit-'+slug+'.json',JSON.stringify(pack,null,2));}
+function importProjectFile(){
+  var fi=$('ip_file'),f=fi&&fi.files[0];
+  if(!f){$('ip_msg').innerHTML='<div class="err">Choose a project file first.</div>';return;}
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var pack=JSON.parse(r.result);
+      if(!pack||pack.kind!=='project-export'||!pack.project||!pack.project.id)
+        throw new Error('Not a Field Kit project export');
+      var p=JSON.parse(JSON.stringify(pack.project));
+      var copy=!!projById(p.id);
+      var newPid=copy?uid():p.id;
+      p.id=newPid;if(p.createdAt===undefined)p.createdAt=Date.now();
+      data.projects.push(p);
+      var swMap={};
+      function pushUnique(arr,x){
+        if(x.id&&arr.some(function(y){return y.id===x.id;}))return;
+        arr.push(x);}
+      function clone(x){return JSON.parse(JSON.stringify(x));}
+      [['timeEntries','projectId'],['pulls','projectId'],['materials','projectId'],['ipAssignments','projectId']]
+        .forEach(function(cfg){
+          (pack[cfg[0]]||[]).forEach(function(x){var c=clone(x);c.projectId=newPid;
+            if(copy)c.id=uid();pushUnique(data[cfg[0]],c);});});
+      (pack.poeSwitches||[]).forEach(function(s){var c=clone(s);
+        if(copy){c.id=uid();swMap[s.id]=c.id;}c.projectId=newPid;pushUnique(data.poeSwitches,c);});
+      (pack.poeDevices||[]).forEach(function(d){var c=clone(d);
+        if(copy){c.id=uid();if(swMap[d.switchId])c.switchId=swMap[d.switchId];}pushUnique(data.poeDevices,c);});
+      (pack.portSwitches||[]).forEach(function(s){var c=clone(s);
+        if(copy){c.id=uid();swMap[s.id]=c.id;}c.projectId=newPid;pushUnique(data.portSwitches,c);});
+      (pack.portEntries||[]).forEach(function(d){var c=clone(d);
+        if(copy){c.id=uid();if(swMap[d.switchId])c.switchId=swMap[d.switchId];}pushUnique(data.portEntries,c);});
+      if(pack.ipSubnets!==undefined){if(!data.ipSubnets)data.ipSubnets={};data.ipSubnets[newPid]=pack.ipSubnets;}
+      if(pack.storageCalcs!==undefined){if(!data.storageCalcs)data.storageCalcs={};data.storageCalcs[newPid]=pack.storageCalcs;}
+      save();render();
+      toast(copy?'Project imported as a copy':'Project imported');
+    }catch(e){$('ip_msg').innerHTML='<div class="err">Import failed: '+esc(e.message)+'</div>';}
+  };
+  r.readAsText(f);}
 /* ============ PROJECT VIEW SHELL ============ */
 function renderProject(){
   var p=projById(view.id);
@@ -436,7 +479,7 @@ function timeHTML(p){
     +'<div><label>End</label><input id="te_end" type="time"></div></div>'
     +'<label>Kind</label><div class="seg" id="teSeg">'
     +KINDS.map(function(k,i){return '<button type="button" data-k="'+k+'" class="'+(i===1?'act':'')+'" onclick="segPick(\'teSeg\',this)">'+k+'</button>';}).join('')+'</div>'
-    +'<label>Notes</label><input id="te_notes" placeholder="What was done">'
+    +'<label>Notes</label><textarea id="te_notes" rows="2" placeholder="What was done" oninput="autoGrow(this)"></textarea>'
     +'<button class="btn" onclick="saveTimeEntry()">'+(teEditId?'Save changes':'Add entry')+'</button>'
     +(teEditId?'<button class="btn sec" style="margin-top:8px" onclick="teEditId=null;render()">Cancel edit</button>':'')
     +'</div>';
@@ -466,6 +509,7 @@ function timeHTML(p){
 }
 function segPick(id,btn){var seg=$(id);Array.prototype.forEach.call(seg.children,function(c){c.className='';});
   btn.className='act';}
+function autoGrow(el){if(!el)return;el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px';}
 function segVal(id){var seg=$(id);for(var i=0;i<seg.children.length;i++)
   if(seg.children[i].className==='act')return seg.children[i].getAttribute('data-k');return KINDS[0];}
 function saveTimeEntry(){
@@ -482,7 +526,7 @@ function saveTimeEntry(){
 function editTimeEntry(id){var e=data.timeEntries.filter(function(x){return x.id===id;})[0];if(!e)return;
   teEditId=id;render();
   $('te_date').value=e.startISO.slice(0,10);$('te_start').value=e.startISO.slice(11,16);
-  $('te_end').value=e.endISO.slice(11,16);$('te_notes').value=e.notes||'';
+  $('te_end').value=e.endISO.slice(11,16);$('te_notes').value=e.notes||'';autoGrow($('te_notes'));
   var seg=$('teSeg');Array.prototype.forEach.call(seg.children,function(c){
     c.className=c.getAttribute('data-k')===e.kind?'act':'';});
   window.scrollTo(0,0);}
