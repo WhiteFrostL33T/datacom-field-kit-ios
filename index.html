@@ -140,7 +140,7 @@ window.FK={
 };
 /* ============ data layer ============ */
 var LS_KEY='fk_data_v1';
-var APP_VERSION='2.7';
+var APP_VERSION='2.8';
 var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Connectwise Notes'],
   ['storage','Storage'],['poe','PoE'],['subnet','Subnet / IP'],['ports','Ports']];
 var ALWAYS_ON=['finallog'];
@@ -899,6 +899,49 @@ function connectwiseNotes(p){
   else mats.forEach(function(m){
     L.push(m.qty+' x '+m.name+' ('+m.unit+')'+(m.notes?'  —  '+m.notes:''));});
   return L.join('\n').replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'');
+}
+function matPick(name,unit){$('mt_name').value=name;$('mt_unit').value=unit;$('mt_qty').focus();}
+function matPicksHTML(){
+  var personal=data.matPicks||[];
+  if(!personal.length)return '';
+  var h='<div class="mut" style="margin:0 0 4px">Your picks</div><div class="seg">'
+    +personal.map(function(pk,i){
+      return '<button type="button" class="preset" onclick="matPick(\''+esc(pk.name)+'\',\''+esc(pk.unit)+'\')">'+esc(pk.name)+'</button>'
+      +'<button type="button" class="preset" style="padding:6px 8px" onclick="delMatPick('+i+')" title="Remove pick">×</button>';}).join('')+'</div>';
+  return h;}
+function delMatPick(i){if(!confirm('Remove this quick pick?'))return;
+  (data.matPicks||[]).splice(i,1);save();render();}
+function learnMatPick(name,unit){
+  if(!data.matPicks)data.matPicks=[];
+  var nl=name.toLowerCase();
+  var known=data.matPicks.some(function(pk){return pk.name.toLowerCase()===nl;});
+  if(!known){data.matPicks.unshift({name:name,unit:unit});
+    if(data.matPicks.length>10)data.matPicks.length=10;}}
+function saveMaterial(){
+  var name=val('mt_name'),qty=parseFloat(val('mt_qty'));
+  if(!name){toast('Item name required');return;}
+  if(!isFinite(qty)||qty<=0){toast('Enter a quantity above 0');return;}
+  if(matEditId){var m=data.materials.filter(function(x){return x.id===matEditId})[0];
+    if(m){m.name=name;m.qty=qty;m.unit=val('mt_unit');m.notes=val('mt_notes');}matEditId=null;}
+  else data.materials.push({id:uid(),projectId:view.id,name:name,qty:qty,
+    unit:val('mt_unit'),notes:val('mt_notes')});
+  learnMatPick(name,val('mt_unit'));
+  save();render();toast('Material saved');}
+function editMaterial(id){var m=data.materials.filter(function(x){return x.id===id;})[0];if(!m)return;
+  matEditId=id;render();$('mt_name').value=m.name;$('mt_qty').value=m.qty;
+  $('mt_unit').value=m.unit;$('mt_notes').value=m.notes||'';window.scrollTo(0,0);}
+function delMaterial(id){if(!confirm('Delete this material line?'))return;
+  data.materials=data.materials.filter(function(x){return x.id!==id;});save();render();}
+/* ============ BACKUP VIEW ============ */
+function renderBackup(){
+  $('app').innerHTML='<div class="card"><h3>Export backup</h3>'
+    +'<p class="mut">All Field Kit data as JSON. Save it somewhere safe — it is the only copy of your on-device data.</p>'
+    +'<button class="btn" onclick="saveFile(\'datacom-field-kit-backup.json\',JSON.stringify(data))">Backup</button></div>'
+    +'<div class="card"><h3>Import backup</h3>'
+    +'<p class="mut">Restoring replaces ALL current data in the app.</p>'
+    +'<input id="bk_file" type="file" accept=".json,.txt,application/json,text/plain">'
+    +'<button class="btn red" onclick="importBackup()">Import and replace all data</button>'
+    +'<div id="bk_msg"></div></div>';
 }
 function importBackup(){
   var f=$('bk_file').files[0];
