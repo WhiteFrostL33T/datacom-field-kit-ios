@@ -35,7 +35,7 @@ is retired (v2.3 was the last APK build); all new work ships here.
 
 GitHub Pages (Deploy from branch → `main`, root):
 
-https://whitefrostl33t.github.io/datacom-field-kit-ios/
+https://whitefrostl33t.github.io/datacom-field-kit-web/
 
 ## Changelog
 
