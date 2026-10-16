@@ -140,8 +140,8 @@ window.FK={
 };
 /* ============ data layer ============ */
 var LS_KEY='fk_data_v1';
-var APP_VERSION='2.6.1';
-var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Final materials log'],
+var APP_VERSION='2.7';
+var MODULES=[['time','Time'],['cable','Cable'],['materials','Materials'],['finallog','Connectwise Notes'],
   ['storage','Storage'],['poe','PoE'],['subnet','Subnet / IP'],['ports','Ports']];
 var ALWAYS_ON=['finallog'];
 var DEFAULT_MODULES=['time','cable','materials'];
@@ -391,6 +391,7 @@ function renderProject(){
   else if(curTab==='ports')body.innerHTML=portsHTML(p);
   else if(curTab==='materials')body.innerHTML=materialsHTML(p);
   else if(curTab==='finallog')body.innerHTML=finallogHTML(p);
+  if(curTab==='finallog')autoGrow($('cw_notes'));
   if(curTab==='time'){var df=$('te_date');if(df&&!df.value)df.value=todayStr();
     var st=$('te_start'),en=$('te_end');
     if(st&&!st.value)st.value='08:00';if(en&&!en.value)en.value='09:00';}
@@ -506,10 +507,6 @@ function timeHTML(p){
         +'<button class="del" onclick="delTimeEntry(\''+e.id+'\')">Del</button></span></div>';});
   });
   h+='</div>';
-  h+='<div class="card"><h3>Export — ConnectWise summary</h3>'
-    +'<textarea id="te_export" readonly>'+esc(timeSummary(p))+'</textarea>'
-    +'<div class="row"><button class="btn sec" onclick="copyText(val(\'te_export\'))">Copy summary</button>'
-    +'<button class="btn sec" onclick="saveFile(\'time-summary.txt\',val(\'te_export\'))">Save .txt</button></div></div>';
   return h;
 }
 function segPick(id,btn){var seg=$(id);Array.prototype.forEach.call(seg.children,function(c){c.className='';});
@@ -537,24 +534,6 @@ function editTimeEntry(id){var e=data.timeEntries.filter(function(x){return x.id
   window.scrollTo(0,0);}
 function delTimeEntry(id){if(!confirm('Delete this time entry?'))return;
   data.timeEntries=data.timeEntries.filter(function(e){return e.id!==id;});save();render();}
-function timeSummary(p){
-  var lines=['Time summary — '+p.name+(p.ticket?' (ConnectWise #'+p.ticket+')':'')];
-  if(p.customer)lines.push('Customer: '+p.customer+(p.site?' · '+p.site:''));
-  var entries=data.timeEntries.filter(function(e){return e.projectId===p.id;})
-    .sort(function(a,b){return a.startISO<b.startISO?-1:1;});
-  if(!entries.length){lines.push('No time entries.');return lines.join('\n');}
-  var byDay={};entries.forEach(function(e){var d=e.startISO.slice(0,10);(byDay[d]=byDay[d]||[]).push(e);});
-  var grand=0;
-  Object.keys(byDay).sort().forEach(function(d){
-    var kindMin={},dayMin=0;
-    byDay[d].forEach(function(e){var m=entryMinutes(e);dayMin+=m;kindMin[e.kind]=(kindMin[e.kind]||0)+m;});
-    grand+=dayMin;
-    lines.push('');lines.push(d+' — total '+fmtH(dayMin));
-    KINDS.forEach(function(k){if(kindMin[k])lines.push('  '+k+': '+fmtH(kindMin[k]));});
-    byDay[d].forEach(function(e){if(e.notes)lines.push('  · '+e.startISO.slice(11,16)+' '+e.kind+' — '+e.notes);});
-  });
-  lines.push('');lines.push('Grand total: '+fmtH(grand));
-  return lines.join('\n');}
 </script>
 
 <script>
@@ -869,71 +848,57 @@ function materialsHTML(p){
   return h;
 }
 function finallogHTML(p){
-  var h='<div class="card"><h3>Final materials log</h3>'
-    +'<p class="mut">Everything on this job — cable by type plus all materials. This section is always on.</p>'
-    +'<textarea id="mt_export" readonly>'+esc(materialsText(p))+'</textarea>'
-    +'<div class="row"><button class="btn sec" onclick="copyText(val(\'mt_export\'))">Copy list</button>'
-    +'<button class="btn sec" onclick="saveFile(\'materials.txt\',val(\'mt_export\'))">Save .txt</button></div></div>';
+  var h='<div class="card"><h3>Connectwise Notes</h3>'
+    +'<p class="mut">Time and materials for this job, formatted for ConnectWise. This section is always on.</p>'
+    +'<textarea id="cw_notes" readonly style="overflow:hidden">'+esc(connectwiseNotes(p))+'</textarea>'
+    +'<div class="row"><button class="btn sec" onclick="copyText(val(\'cw_notes\'))">Copy notes</button>'
+    +'<button class="btn sec" onclick="saveFile(\'connectwise-notes.txt\',val(\'cw_notes\'))">Save .txt</button></div></div>';
   return h;
 }
-function materialsText(p){
-  var lines=[p.name];
-  if(p.ticket)lines.push('ConnectWise #'+p.ticket);
-  lines.push('');
+function connectwiseNotes(p){
+  var L=[];
+  L.push('CONNECTWISE NOTES');
+  L.push(p.name+(p.ticket?'  |  ConnectWise #'+p.ticket:''));
+  if(p.customer)L.push('Customer: '+p.customer+(p.site?'  |  Site: '+p.site:''));
+  L.push('Prepared: '+todayStr());
+  L.push('');
+  L.push('TIME');
+  L.push('----------------------------------------');
+  var entries=data.timeEntries.filter(function(e){return e.projectId===p.id;})
+    .sort(function(a,b){return a.startISO<b.startISO?-1:1;});
+  if(!entries.length){L.push('No time entries.');}
+  else{
+    var byDay={},grand=0;
+    entries.forEach(function(e){var d=e.startISO.slice(0,10);(byDay[d]=byDay[d]||[]).push(e);});
+    Object.keys(byDay).sort().forEach(function(d){
+      var kindMin={},dayMin=0;
+      byDay[d].forEach(function(e){var m=entryMinutes(e);dayMin+=m;kindMin[e.kind]=(kindMin[e.kind]||0)+m;});
+      grand+=dayMin;
+      L.push(d+'  |  '+fmtH(dayMin));
+      KINDS.forEach(function(k){if(kindMin[k])L.push('  '+k+': '+fmtH(kindMin[k]));});
+      byDay[d].forEach(function(e){
+        L.push('  '+e.startISO.slice(11,16)+'-'+e.endISO.slice(11,16)+'  '+e.kind+(e.notes?'  —  '+e.notes:''));});
+      L.push('');
+    });
+    L.push('Total time: '+fmtH(grand));
+  }
+  L.push('');
+  L.push('CABLE');
+  L.push('----------------------------------------');
   var byType={};
   data.pulls.filter(function(x){return x.projectId===p.id;}).forEach(function(x){
     var t=x.run||'Unspecified';byType[t]=(byType[t]||0)+(Number(x.used)||0);});
   var types=Object.keys(byType);
-  if(types.length){lines.push('Cable:');
-    types.forEach(function(t){lines.push('  '+t+': '+byType[t]+' ft');});
-    lines.push('');}
+  if(!types.length)L.push('No cable pulls logged.');
+  else types.forEach(function(t){L.push(t+': '+byType[t]+' ft');});
+  L.push('');
+  L.push('MATERIALS');
+  L.push('----------------------------------------');
   var mats=data.materials.filter(function(m){return m.projectId===p.id;});
-  if(mats.length){lines.push('Materials:');
-    mats.forEach(function(m){
-      lines.push('  '+m.qty+' × '+m.name+' ('+m.unit+')'+(m.notes?' — '+m.notes:''));});}
-  return lines.join('\n').replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'');}
-function matPick(name,unit){$('mt_name').value=name;$('mt_unit').value=unit;$('mt_qty').focus();}
-function matPicksHTML(){
-  var personal=data.matPicks||[];
-  if(!personal.length)return '';
-  var h='<div class="mut" style="margin:0 0 4px">Your picks</div><div class="seg">'
-    +personal.map(function(pk,i){
-      return '<button type="button" class="preset" onclick="matPick(\''+esc(pk.name)+'\',\''+esc(pk.unit)+'\')">'+esc(pk.name)+'</button>'
-      +'<button type="button" class="preset" style="padding:6px 8px" onclick="delMatPick('+i+')" title="Remove pick">×</button>';}).join('')+'</div>';
-  return h;}
-function delMatPick(i){if(!confirm('Remove this quick pick?'))return;
-  (data.matPicks||[]).splice(i,1);save();render();}
-function learnMatPick(name,unit){
-  if(!data.matPicks)data.matPicks=[];
-  var nl=name.toLowerCase();
-  var known=data.matPicks.some(function(pk){return pk.name.toLowerCase()===nl;});
-  if(!known){data.matPicks.unshift({name:name,unit:unit});
-    if(data.matPicks.length>10)data.matPicks.length=10;}}
-function saveMaterial(){
-  var name=val('mt_name'),qty=parseFloat(val('mt_qty'));
-  if(!name){toast('Item name required');return;}
-  if(!isFinite(qty)||qty<=0){toast('Enter a quantity above 0');return;}
-  if(matEditId){var m=data.materials.filter(function(x){return x.id===matEditId;})[0];
-    if(m){m.name=name;m.qty=qty;m.unit=val('mt_unit');m.notes=val('mt_notes');}matEditId=null;}
-  else data.materials.push({id:uid(),projectId:view.id,name:name,qty:qty,
-    unit:val('mt_unit'),notes:val('mt_notes')});
-  learnMatPick(name,val('mt_unit'));
-  save();render();toast('Material saved');}
-function editMaterial(id){var m=data.materials.filter(function(x){return x.id===id;})[0];if(!m)return;
-  matEditId=id;render();$('mt_name').value=m.name;$('mt_qty').value=m.qty;
-  $('mt_unit').value=m.unit;$('mt_notes').value=m.notes||'';window.scrollTo(0,0);}
-function delMaterial(id){if(!confirm('Delete this material line?'))return;
-  data.materials=data.materials.filter(function(x){return x.id!==id;});save();render();}
-/* ============ BACKUP VIEW ============ */
-function renderBackup(){
-  $('app').innerHTML='<div class="card"><h3>Export backup</h3>'
-    +'<p class="mut">All Field Kit data as JSON. Save it somewhere safe — it is the only copy of your on-device data.</p>'
-    +'<button class="btn" onclick="saveFile(\'datacom-field-kit-backup.json\',JSON.stringify(data))">Backup</button></div>'
-    +'<div class="card"><h3>Import backup</h3>'
-    +'<p class="mut">Restoring replaces ALL current data in the app.</p>'
-    +'<input id="bk_file" type="file" accept=".json,.txt,application/json,text/plain">'
-    +'<button class="btn red" onclick="importBackup()">Import and replace all data</button>'
-    +'<div id="bk_msg"></div></div>';
+  if(!mats.length)L.push('No materials logged.');
+  else mats.forEach(function(m){
+    L.push(m.qty+' x '+m.name+' ('+m.unit+')'+(m.notes?'  —  '+m.notes:''));});
+  return L.join('\n').replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'');
 }
 function importBackup(){
   var f=$('bk_file').files[0];

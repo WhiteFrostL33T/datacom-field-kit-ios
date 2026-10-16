@@ -4,7 +4,7 @@ The Datacom Field Kit as a universal web app for **Android and iOS**.
 Installable, works offline, no account, no cloud — all data lives in the
 browser on the device (localStorage).
 
-**Current version:** v2.6.1
+**Current version:** v2.7
 
 This repo is now the single home of the app. The standalone Android APK
 is retired (v2.3 was the last APK build); all new work ships here.
@@ -38,6 +38,10 @@ GitHub Pages (Deploy from branch → `main`, root):
 https://whitefrostl33t.github.io/datacom-field-kit-ios/
 
 ## Changelog
+
+- **v2.7** — new Connectwise Notes section: time entries, cable and
+  materials combined in one professional export that grows to fit
+  (no scrolling); the old Time-tab summary box is gone.
 
 - **v2.6.1** — backup export simplified: no more raw JSON preview,
   single full-width Backup button.
